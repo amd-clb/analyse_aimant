@@ -1,36 +1,38 @@
-# Analyse du champ magnétique d’un aimant
+# Analyse et comparaison de champs magnétiques
 
-Ce projet visualise le champ magnétique produit par un petit aimant cylindrique N52 dans un demi-tube. Il utilise NumPy pour construire une grille de calcul et Magpylib pour calculer le champ.
+Le programme compare plusieurs aimants cylindriques à partir d’un fichier CSV. Il convertit leur grade en rémanence nominale `Br`, calcule le champ dans deux directions de déplacement autour de l’aimant, affiche les cartes avec une échelle commune et enregistre l’image.
 
-## Aimant modélisé
+## Grades pris en charge
 
-- Format : 1/8 × 1/16 pouce
-- Diamètre : 3,175 mm
-- Hauteur : 1,5875 mm
-- Rémanence : 1450 mT
-- Seuil cible : 30 mT
-- Grille radiale : 80 points
-- Grille d’air gap : 150 points
+Grades disponibles : **N35, N38, N40, N42, N45, N48, N50 et N52**. Les valeurs nominales de la table fournie sont converties de teslas en milliteslas :
 
-## Fonctionnalités
+| Grade | Br nominal (T) | Br utilisé (mT) |
+|---|---:|---:|
+| N35 | 1,19 | 1190 |
+| N38 | 1,24 | 1240 |
+| N40 | 1,27 | 1270 |
+| N42 | 1,30 | 1300 |
+| N45 | 1,35 | 1350 |
+| N48 | 1,40 | 1400 |
+| N50 | 1,43 | 1430 |
+| N52 | 1,45 | 1450 |
 
-- Calcul vectorisé du champ magnétique dans les plans XZ et YZ
-- Cartographie 2D de la norme du champ avec Matplotlib
-- Courbes d’isochamp à 15, 20, 30, 50, 100, 150 et 200 mT
-- Recherche de l’air gap maximal garanti
-- Affichage de deux critères :
-  - norme totale du champ `|B|`
-  - composante axiale `|Bx|`
+Un grade inconnu ou une dimension invalide produit une erreur explicite.
 
-## Prérequis
+## Format CSV
 
-- Python 3
-- Windows PowerShell
-- Un environnement graphique compatible avec Matplotlib
+Le fichier `aimants.csv` fourni sert d’exemple et de modèle :
+
+```csv
+diametre;hauteur;grade
+1/8in;1/16in;N35
+3.175mm;1.5875mm;N45
+0.125in;0.0625in;N52
+```
+
+Les dimensions sont converties en millimètres avant le calcul. Vous pouvez écrire `1/16"`, `1/16in`, `2.4mm`, ou un nombre sans unité (interprété en millimètres). Les fractions et les décimales avec point ou virgule sont acceptées; un pouce vaut exactement 25,4 mm. Les en-têtes `diametre`/`diamètre` et `hauteur`, avec ou sans suffixe `_mm`, sont acceptés. Le séparateur `;` permet d’utiliser les virgules décimales françaises. Les grades ne sont pas sensibles à la casse.
 
 ## Installation
-
-Depuis le dossier du projet :
 
 ```powershell
 python -m venv .venv
@@ -41,50 +43,29 @@ pip install -r requirements.txt
 
 ## Exécution
 
+Depuis le dossier du projet :
+
 ```powershell
 python visualisation.py
 ```
 
-Le programme affiche dans la console :
+Par défaut, le programme lit `aimants.csv`, affiche les résultats dans la console et enregistre l’image sous `comparaison_aimants.png` avant d’ouvrir la fenêtre Matplotlib.
 
-- l’air gap maximal garanti selon `|B|`
-- l’air gap maximal garanti pour un capteur à axe X selon `|Bx|`
+Dans la fenêtre, le curseur **Seuil |B| (mT)** déplace la courbe rouge. Vous pouvez aussi saisir directement une valeur dans le champ **Saisie (mT)**, puis valider avec Entrée. Les décimales avec un point ou une virgule sont acceptées; la valeur doit être comprise entre 1 mT et la limite du curseur. Une saisie invalide affiche un message et conserve le seuil précédent. Les valeurs d’air gap estimées pour `|B|` et `|Bx|` suivent le seuil sélectionné. L’image PNG est mise à jour automatiquement quand le seuil change.
 
-Une fenêtre Matplotlib présente ensuite les cartes du champ dans les plans XZ et YZ.
+Les chemins peuvent être précisés :
 
-## Structure du projet
-
-```text
-.
-├── visualisation.py
-├── requirements.txt
-└── README.md
+```powershell
+python visualisation.py --csv chemin\vers\aimants.csv --sortie resultats\comparaison.png
 ```
 
-## Paramètres modifiables
+Chaque aimant occupe une rangée avec deux vues décrites sans abréviations de plans : déplacement radial parallèle à l’aimantation (+X) et déplacement radial perpendiculaire à l’aimantation (+Y). Une échelle de couleur commune facilite la comparaison. Le résumé console indique pour chaque aimant l’air gap estimé selon `|B|` et selon `|Bx|`.
 
-Les principaux paramètres sont déclarés au début de `visualisation.py` :
+## Organisation du code
 
-```python
-D = 2 / 16 * 25.4
-H = 1 / 16 * 25.4
-Br = 1450.0
-B_cible = 30.0
-
-gap_min = 0.1
-gap_max = 3.0
-```
-
-Il est également possible d’ajuster :
-
-- `np.linspace(0.0, rayon_tube, 80)` pour la résolution radiale
-- `np.linspace(gap_min, gap_max, 150)` pour la résolution verticale
-- les niveaux affichés dans `ax.contour`
-- les paramètres d’affichage de la heatmap
-
-## Dépendances principales
-
-- NumPy
-- Matplotlib
-- Magpylib
-- SciPy
+- `aimant.py` : modèle de l’aimant et conversion grade–`Br`
+- `lecteur_csv.py` : validation et chargement du CSV
+- `calculateur.py` : calcul vectorisé du champ avec Magpylib
+- `visualiseur.py` : comparaison et sauvegarde des figures
+- `visualisation.py` : point d’entrée en ligne de commande
+- `tests/` : tests du chargement CSV et de la conversion des grades
